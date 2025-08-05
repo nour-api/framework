@@ -12,6 +12,9 @@
             "src/helpers.php"
         ]
     },
+    "scripts": {
+        "test": "phpunit"
+    },
     "authors": [
         {
             "name": "Ajmal Alkhaledi",
