@@ -27,6 +27,8 @@ class Router
      */
     protected $routes = [];
 
+    protected int $revision = 0;
+
     /**
      * All of the named routes and URI pairs.
      *
@@ -187,6 +189,7 @@ class Router
         }
 
         $uri = '/'.trim($uri, '/');
+        $this->revision++;
 
         if (isset($action['as'])) {
             $this->namedRoutes[$action['as']] = $uri;
@@ -418,6 +421,12 @@ class Router
         $this->addRoute('OPTIONS', $uri, $action);
 
         return $this;
+    }
+
+    /** Get the revision used to invalidate the compiled dispatcher. */
+    public function getRevision(): int
+    {
+        return $this->revision;
     }
 
     /**

@@ -68,6 +68,21 @@ class RequestLifecycleTest extends TestCase
         self::assertSame('42', $app->handle(IlluminateRequest::create('/users/42'))->getContent());
     }
 
+    public function testDynamicRouteCacheIsInvalidatedWhenRoutesChange(): void
+    {
+        $app = new Application;
+        $app->router->get('/users/{id}', static fn ($id) => 'old:'.$id);
+        self::assertSame('old:42', $app->handle(Request::create('/users/42'))->getContent());
+        $app->router->get('/users/{id}', static fn ($id) => 'new:'.$id);
+        self::assertSame('new:42', $app->handle(Request::create('/users/42'))->getContent());
+        $app->router->get('/teams/{id}', static fn ($id) => $id);
+        self::assertSame('7', $app->handle(Request::create('/teams/7'))->getContent());
+        $app->bootstrapRouter();
+        $app->router->get('/reset/{id}', static fn ($id) => $id);
+        self::assertSame('9', $app->handle(Request::create('/reset/9'))->getContent());
+        self::assertSame(404, $app->handle(Request::create('/users/42'))->getStatusCode());
+    }
+
     public function testNamedRouteParametersCannotInjectQueryOrPathSegments(): void
     {
         $app = new Application;

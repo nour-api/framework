@@ -1036,6 +1036,9 @@ class Application extends Container
 
         $this->router = null;
         $this->dispatcher = null;
+        $this->compiledDispatcher = null;
+        $this->compiledRouter = null;
+        $this->compiledRouteRevision = -1;
         static::$instance = null;
         static::$aliasesRegistered = false;
     }

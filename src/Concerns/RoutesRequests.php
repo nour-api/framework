@@ -54,6 +54,11 @@ trait RoutesRequests
      */
     protected $dispatcher;
 
+    protected $compiledDispatcher;
+
+    protected $compiledRouter;
+
+    protected int $compiledRouteRevision = -1;
 
     /**
      * Add new middleware to the application.
@@ -206,11 +211,25 @@ trait RoutesRequests
      */
     protected function createDispatcher()
     {
-        return $this->dispatcher ?: \FastRoute\simpleDispatcher(function ($r) {
+        if ($this->dispatcher) {
+            return $this->dispatcher;
+        }
+
+        if ($this->compiledDispatcher && $this->compiledRouter === $this->router &&
+            $this->compiledRouteRevision === $this->router->getRevision()) {
+            return $this->compiledDispatcher;
+        }
+
+        $dispatcher = \FastRoute\simpleDispatcher(function ($r) {
             foreach ($this->router->getRoutes() as $route) {
                 $r->addRoute($route['method'], $route['uri'], $route['action']);
             }
         });
+
+        $this->compiledRouter = $this->router;
+        $this->compiledRouteRevision = $this->router->getRevision();
+
+        return $this->compiledDispatcher = $dispatcher;
     }
 
     /**
