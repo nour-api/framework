@@ -24,3 +24,8 @@ The skeleton's token authentication remains an example requiring an application 
 - Testing `actingAs()`/`be()` identities persist across that test's requests and reset on application refresh. This test-only behavior does not disable runtime request identity isolation.
 - Test teardown attempts every registered cleanup and flushes the application even if a cleanup callback fails; it then reports the first failure.
 - The development suite checks actual PDO SQLite driver availability for executable database coverage, without requiring a particular extension provider. Production requirements and Composer consumers remain unchanged.
+
+## CI compatibility corrections
+
+- Resolving the database component also resolves its event dispatcher before a connection is created. Query and transaction events therefore work before application boot, without depending on other services having already initialized events.
+- The installer permission regression check refreshes PHP stat metadata before verifying the private environment file mode. The required permission remains `0600`.

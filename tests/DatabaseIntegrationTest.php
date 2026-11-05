@@ -40,6 +40,22 @@ class DatabaseIntegrationTest extends TestCase
         parent::tearDown();
     }
 
+    public function testConnectionResolvedBeforeBootPublishesDatabaseEvents(): void
+    {
+        $app = new Application;
+        $app->configure('database');
+        $app['config']->set('database.default', 'sqlite');
+        $app['config']->set('database.connections.sqlite', ['driver' => 'sqlite', 'database' => ':memory:']);
+        $connection = $app['db']->connection();
+        $queries = [];
+        $app['events']->listen(\Illuminate\Database\Events\QueryExecuted::class, function ($event) use (&$queries) {
+            $queries[] = $event->sql;
+        });
+        $connection->select('select 1');
+        self::assertSame(['select 1'], $queries);
+        self::assertSame($app['events'], $connection->getEventDispatcher());
+    }
+
     public function testEloquentCrudAndHttpDispatchUseRealSqlite(): void
     {
         $app = $this->application();

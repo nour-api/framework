@@ -440,6 +440,7 @@ class Application extends Container
     {
         $this->singleton('db', function () {
             $this->configure('app');
+            $this->make('events');
 
             return $this->loadComponent(
                 'database', [
