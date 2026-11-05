@@ -41,3 +41,11 @@ The version alias selects local source for testing; it does not publish a releas
 The explicit Redis script requires Linux/Unix, `redis-server`, and `phpredis`. It starts its own non-persistent Redis process with TCP disabled and a private temporary Unix socket. It verifies cache read/write, atomic add, lock ownership, queue push/pop, job execution and acknowledgement. It stops its own process and removes its own temporary files, including on failure. It never connects to the application's configured Redis server.
 
 The PHPUnit optional checks verify Redis container resolution and PSR response/request conversion, including request refresh between HTTP dispatches. Without optional packages the ordinary suite checks actionable dependency errors. The optional CI job installs those packages only in its disposable checkout; the real Redis process script remains an explicit local check.
+
+For a real MySQL-compatible engine, run:
+
+```sh
+php tests/integration/mariadb.php
+```
+
+This explicit Unix check requires `mariadbd`, `mariadb-install-db`, PDO MySQL and POSIX functions. It initializes its own private temporary datadir with Unix-socket account authentication, disables TCP networking, and tests Eloquent CRUD, SQL parameter binding, database-backed uniqueness validation, transaction rollback and Artisan migration/rollback. It stops its own server and deletes only its own datadir afterward. No installed application database or existing database server is used. It does not install packages, alter system services or disable database authentication.
