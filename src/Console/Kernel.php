@@ -178,7 +178,7 @@ class Kernel implements KernelContract
      */
     public function bootstrap()
     {
-        //
+        $this->app->boot();
     }
 
     /**
@@ -255,6 +255,8 @@ class Kernel implements KernelContract
      */
     protected function getArtisan()
     {
+        $this->bootstrap();
+
         if (is_null($this->artisan)) {
             $this->artisan = (new Artisan($this->app, $this->app->make('events'), $this->app->version()))
                                 ->resolveCommands($this->getCommands())
