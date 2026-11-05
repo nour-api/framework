@@ -1,7 +1,10 @@
 {
     "name": "nour-api/framework",
     "description": "Nour API Framework kernel",
-    "keywords": ["framework", "nour-api"],
+    "keywords": [
+        "framework",
+        "nour-api"
+    ],
     "type": "library",
     "license": "MIT",
     "autoload": {
@@ -62,8 +65,13 @@
     },
     "require-dev": {
         "mockery/mockery": "^1.6",
-        "phpunit/phpunit": "^12.3"
+        "phpunit/phpunit": "^11.5 || ^12.3"
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "suggest": {
+        "illuminate/redis": "Redis cache and queue connections (^12.21).",
+        "symfony/psr-http-message-bridge": "Optional PSR-7 request and response conversion (^7.3).",
+        "nyholm/psr7": "Optional PSR-7 request and response objects (^1.8)."
+    }
 }

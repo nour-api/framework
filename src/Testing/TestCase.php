@@ -12,7 +12,7 @@ use PHPUnit\Framework\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
-    use Concerns\MakesHttpRequests;
+    use Concerns\MakesHttpRequests, Concerns\RestoresPhpHandlers;
 
     /**
      * The application instance.
@@ -34,6 +34,10 @@ abstract class TestCase extends BaseTestCase
      * @var array
      */
     protected $beforeApplicationDestroyedCallbacks = [];
+
+    protected $dispatchedJobs = [];
+
+    protected $code;
 
     /**
      * Creates the application.
@@ -85,19 +89,19 @@ abstract class TestCase extends BaseTestCase
     {
         $uses = array_flip(class_uses_recursive(get_class($this)));
 
-        if (isset($uses[DatabaseMigrations::class])) {
+        if (isset($uses[DatabaseMigrations::class]) && method_exists($this, 'runDatabaseMigrations')) {
             $this->runDatabaseMigrations();
         }
 
-        if (isset($uses[DatabaseTransactions::class])) {
+        if (isset($uses[DatabaseTransactions::class]) && method_exists($this, 'beginDatabaseTransaction')) {
             $this->beginDatabaseTransaction();
         }
 
-        if (isset($uses[WithoutMiddleware::class])) {
+        if (isset($uses[WithoutMiddleware::class]) && method_exists($this, 'disableMiddlewareForAllTests')) {
             $this->disableMiddlewareForAllTests();
         }
 
-        if (isset($uses[WithoutEvents::class])) {
+        if (isset($uses[WithoutEvents::class]) && method_exists($this, 'disableEventsForAllTests')) {
             $this->disableEventsForAllTests();
         }
     }

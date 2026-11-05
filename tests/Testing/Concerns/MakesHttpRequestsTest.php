@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 
 class MakesHttpRequestsTest extends TestCase
 {
-    use MakesHttpRequests;
+    use MakesHttpRequests, \NourApi\Framework\Testing\Concerns\RestoresPhpHandlers;
 
     public function testReceiveJson()
     {

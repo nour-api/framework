@@ -17,6 +17,8 @@ use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
 class FullApplicationTest extends TestCase
 {
+    use \NourApi\Framework\Testing\Concerns\RestoresPhpHandlers;
+
     protected function setUp(): void
     {
         Facade::clearResolvedInstances();

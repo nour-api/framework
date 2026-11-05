@@ -9,7 +9,7 @@ use PHPUnit\Framework\TestCase;
 
 class HandleExceptionsTest extends TestCase
 {
-    use RegistersExceptionHandlers;
+    use RegistersExceptionHandlers, \NourApi\Framework\Testing\Concerns\RestoresPhpHandlers;
 
     protected $container;
 
@@ -17,6 +17,8 @@ class HandleExceptionsTest extends TestCase
 
     protected function setUp(): void
     {
+        error_reporting(E_ALL);
+
         $this->container = new Container;
 
         $this->config = new Config();
