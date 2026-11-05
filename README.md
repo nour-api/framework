@@ -27,3 +27,19 @@ Nour-API is a stunningly fast PHP micro-framework for building web applications 
 ## License
 
 Nour-API is open-sourced software licensed under the [MIT license](LICENSE.md).
+
+## Development and verification
+
+The kernel uses Illuminate 12 components, Symfony HTTP responses and FastRoute. Runtime PHP remains `^8.2`. Development PHPUnit can resolve version 11.5 on PHP 8.2 and newer versions on compatible PHP runtimes.
+
+```sh
+composer install --no-plugins --no-scripts
+composer test -- --fail-on-risky --fail-on-warning
+composer validate --strict
+composer audit
+php benchmarks/router.php
+```
+
+See [UPGRADE.md](UPGRADE.md) for behavior changes and `../docs/guide/index.html` in the five-repository workspace for the maintained engineering guide. Normal HTTP operation requires no PSR-7 bridge; install `symfony/psr-http-message-bridge` and `nyholm/psr7` only if using optional PSR request/response conversion.
+
+A fresh application per concurrent request is required. Sequential request fixes do not certify custom singletons, third-party guards or services for concurrent workers.
