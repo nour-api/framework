@@ -49,6 +49,7 @@ trait RegistersExceptionHandlers
 
         set_exception_handler(function ($e) {
             $this->handleException($e);
+            exit(1);
         });
 
         register_shutdown_function(function () {
@@ -72,7 +73,9 @@ trait RegistersExceptionHandlers
     {
         if (error_reporting() & $level) {
             if ($this->isDeprecation($level)) {
-                return $this->handleDeprecation($message, $file, $line);
+                $this->handleDeprecation($message, $file, $line);
+
+                return;
             }
 
             throw new ErrorException($message, 0, $level, $file, $line);

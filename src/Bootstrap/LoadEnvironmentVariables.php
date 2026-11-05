@@ -50,7 +50,7 @@ class LoadEnvironmentVariables
         } catch (InvalidFileException $e) {
             $this->writeErrorAndDie([
                 'The environment file is invalid!',
-                $e->getMessage(),
+                'Check dotenv syntax in your environment configuration.',
             ]);
         }
     }

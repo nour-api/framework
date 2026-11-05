@@ -4,6 +4,7 @@ namespace NourApi\Framework\Exceptions;
 
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Console\View\Components\BulletList;
 use Illuminate\Console\View\Components\Error;
 use Illuminate\Contracts\Debug\ExceptionHandler;
@@ -108,12 +109,17 @@ class Handler implements ExceptionHandler
 
         if ($e instanceof HttpResponseException) {
             return $e->getResponse();
+        } elseif ($e instanceof AuthenticationException) {
+            return new JsonResponse(['message' => 'Unauthenticated.'], 401);
         } elseif ($e instanceof ModelNotFoundException) {
             $e = new NotFoundHttpException($e->getMessage(), $e);
         } elseif ($e instanceof AuthorizationException) {
             $e = new HttpException($e->status() ?? 403, $e->getMessage());
-        } elseif ($e instanceof ValidationException && $e->getResponse()) {
-            return $e->getResponse();
+        } elseif ($e instanceof ValidationException) {
+            return $e->getResponse() ?? new JsonResponse([
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], $e->status);
         }
 
         return $request->expectsJson()
@@ -155,7 +161,7 @@ class Handler implements ExceptionHandler
                 return Arr::except($trace, ['args']);
             })->all(),
         ] : [
-            'message' => $this->isHttpException($e) ? $e->getMessage() : 'Server Error',
+            'message' => $this->isHttpException($e) && $e->getStatusCode() < 500 ? $e->getMessage() : 'Server Error',
         ];
     }
 
