@@ -76,6 +76,10 @@ class Application extends Container
      */
     protected $booted = false;
 
+    protected $booting = false;
+
+    protected $bootedProviders = [];
+
     /**
      * The loaded service providers.
      *
@@ -281,15 +285,22 @@ class Application extends Container
      */
     public function boot()
     {
-        if ($this->booted) {
+        if ($this->booted || $this->booting) {
             return;
         }
 
-        foreach ($this->loadedProviders as $provider) {
-            $this->bootProvider($provider);
+        $this->booting = true;
+        try {
+            while ($pending = array_diff_key($this->loadedProviders, $this->bootedProviders)) {
+                foreach ($pending as $name => $provider) {
+                    $this->bootProvider($provider);
+                    $this->bootedProviders[$name] = true;
+                }
+            }
+            $this->booted = true;
+        } finally {
+            $this->booting = false;
         }
-
-        $this->booted = true;
     }
 
     /**
@@ -778,6 +789,10 @@ class Application extends Container
      */
     public function withFacades($aliases = true, $userAliases = [])
     {
+        if (Facade::getFacadeApplication() !== $this) {
+            Facade::clearResolvedInstances();
+        }
+
         Facade::setFacadeApplication($this);
 
         if ($aliases) {
@@ -808,15 +823,12 @@ class Application extends Container
             \Illuminate\Support\Facades\Validator::class => 'Validator',
         ];
 
-        if (! static::$aliasesRegistered) {
-            static::$aliasesRegistered = true;
+        $merged = static::$aliasesRegistered ? $userAliases : array_merge($defaults, $userAliases);
+        static::$aliasesRegistered = true;
 
-            $merged = array_merge($defaults, $userAliases);
-
-            foreach ($merged as $original => $alias) {
-                if (! class_exists($alias)) {
-                    class_alias($original, $alias);
-                }
+        foreach ($merged as $original => $alias) {
+            if (! class_exists($alias)) {
+                class_alias($original, $alias);
             }
         }
     }
@@ -1026,6 +1038,9 @@ class Application extends Container
         $this->middleware = [];
         $this->currentRoute = [];
         $this->loadedProviders = [];
+        $this->bootedProviders = [];
+        $this->booting = false;
+        $this->booted = false;
         $this->routeMiddleware = [];
         $this->reboundCallbacks = [];
         $this->resolvingCallbacks = [];
