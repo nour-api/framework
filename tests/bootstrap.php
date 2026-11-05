@@ -28,3 +28,9 @@ require __DIR__.'/../vendor/autoload.php';
 date_default_timezone_set('UTC');
 
 Carbon\Carbon::setTestNow(Carbon\Carbon::now());
+
+// Check the PDO capability rather than an extension name: alternative PHP
+// extensions may register a working SQLite driver without ext-pdo_sqlite.
+if (! in_array('sqlite', PDO::getAvailableDrivers(), true)) {
+    throw new RuntimeException('Database integration tests require a PDO SQLite driver (usually ext-pdo_sqlite).');
+}

@@ -65,8 +65,7 @@
     },
     "require-dev": {
         "mockery/mockery": "^1.6",
-        "phpunit/phpunit": "^11.5 || ^12.3",
-        "ext-pdo_sqlite": "*"
+        "phpunit/phpunit": "^11.5 || ^12.3"
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
