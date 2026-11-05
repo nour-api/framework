@@ -54,6 +54,7 @@ trait RoutesRequests
      */
     protected $dispatcher;
 
+
     /**
      * Add new middleware to the application.
      *
@@ -66,7 +67,7 @@ trait RoutesRequests
             $middleware = [$middleware];
         }
 
-        $this->middleware = array_unique(array_merge($this->middleware, $middleware));
+        $this->middleware = array_unique(array_merge($this->middleware, $middleware), SORT_REGULAR);
 
         return $this;
     }
@@ -121,7 +122,7 @@ trait RoutesRequests
             $this->callTerminableMiddleware($response);
         }
 
-        $this->app->terminate();
+        $this->terminate();
     }
 
     /**
@@ -159,12 +160,13 @@ trait RoutesRequests
      */
     public function dispatch($request = null)
     {
-        [$method, $pathInfo] = $this->parseIncomingRequest($request);
+        $this->currentRoute = null;
 
         try {
+            [$method, $pathInfo] = $this->parseIncomingRequest($request);
             $this->boot();
 
-            return $this->sendThroughPipeline($this->middleware, function ($request) use ($method, $pathInfo) {
+            return $this->prepareResponse($this->sendThroughPipeline($this->middleware, function ($request) use ($method, $pathInfo) {
                 $this->instance(Request::class, $request);
 
                 if (isset($this->router->getRoutes()[$method.$pathInfo])) {
@@ -174,7 +176,7 @@ trait RoutesRequests
                 return $this->handleDispatcherResponse(
                     $this->createDispatcher()->dispatch($method, $pathInfo)
                 );
-            });
+            }));
         } catch (Throwable $e) {
             return $this->prepareResponse($this->sendExceptionToHandler($e));
         }
@@ -286,7 +288,9 @@ trait RoutesRequests
 
         foreach ($action as $value) {
             if ($value instanceof Closure) {
-                $callable = $value->bindTo(new RoutingClosure);
+                $callable = (new \ReflectionFunction($value))->isStatic()
+                    ? $value
+                    : $value->bindTo(new RoutingClosure);
                 break;
             }
 
@@ -439,18 +443,22 @@ trait RoutesRequests
      */
     public function prepareResponse($response)
     {
-        $request = app(Request::class);
+        $request = $this->make(Request::class);
 
         if ($response instanceof Responsable) {
             $response = $response->toResponse($request);
         }
 
         if ($response instanceof PsrResponseInterface) {
+            if (! class_exists(HttpFoundationFactory::class)) {
+                throw new \Illuminate\Contracts\Container\BindingResolutionException('Unable to convert PSR response. Please install symfony/psr-http-message-bridge.');
+            }
+
             $response = (new HttpFoundationFactory)->createResponse($response);
         } elseif (! $response instanceof SymfonyResponse) {
             $response = new Response($response);
         } elseif ($response instanceof BinaryFileResponse) {
-            $response = $response->prepare(Request::capture());
+            $response = $response->prepare($request);
         }
 
         return $response->prepare($request);

@@ -17,7 +17,7 @@ class Request extends BaseRequest
      */
     public function routeIs(...$patterns)
     {
-        if (! Arr::exists($route = $this->route()[1], 'as')) {
+        if (! Arr::exists($route = ($this->route()[1] ?? []), 'as')) {
             return false;
         }
 
@@ -75,7 +75,7 @@ class Request extends BaseRequest
     public function offsetExists($offset): bool
     {
         return Arr::has(
-            $this->all() + $this->route()[2],
+            $this->all() + ($this->route()[2] ?? []),
             $offset
         );
     }

@@ -3,7 +3,6 @@
 namespace NourApi\Framework;
 
 use Illuminate\Auth\AuthManager;
-use Illuminate\Auth\AuthServiceProvider;
 use Illuminate\Broadcasting\BroadcastServiceProvider;
 use Illuminate\Bus\BusServiceProvider;
 use Illuminate\Cache\CacheServiceProvider;
@@ -33,6 +32,7 @@ use Illuminate\Translation\TranslationServiceProvider;
 use Illuminate\Validation\ValidationServiceProvider;
 use Illuminate\View\ViewServiceProvider;
 use NourApi\Framework\Console\ConsoleServiceProvider;
+use NourApi\Framework\Providers\AuthServiceProvider;
 use NourApi\Framework\Routing\Router;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\Response as PsrResponse;
@@ -169,7 +169,7 @@ class Application extends Container
      */
     public function version()
     {
-        return 'Lumen (11.1.0) (Laravel Components ^11.0)';
+        return 'Nour-API (2.1) (Illuminate Components ^12.21)';
     }
 
     /**
@@ -550,6 +550,18 @@ class Application extends Container
         });
     }
 
+    /** Register optional Redis services only when the matching Illuminate component is installed. */
+    protected function registerRedisBindings()
+    {
+        $provider = 'Illuminate\\Redis\\RedisServiceProvider';
+        if (! class_exists($provider)) {
+            throw new BindingResolutionException('Unable to resolve Redis. Please install illuminate/redis:^12.21 and configure a Redis client.');
+        }
+
+        $this->configure('database');
+        $this->register($provider);
+    }
+
     /**
      * Prepare the given request instance for use with the application.
      *
@@ -558,8 +570,18 @@ class Application extends Container
      */
     protected function prepareRequest(SymfonyRequest $request)
     {
-        if (! $request instanceof Request) {
-            $request = Request::createFromBase($request);
+        if (! $request instanceof Http\Request) {
+            $request = Http\Request::createFromBase($request);
+        }
+
+        if ($this->resolved('url') && $this->make('url') instanceof Routing\UrlGenerator) {
+            $this->make('url')->resetRequestCache();
+        }
+
+        $this->forgetInstance(ServerRequestInterface::class);
+
+        if ($this->bound('request') && $this->resolved('auth') && $this->make('auth') instanceof Auth\AuthManager) {
+            $this->make('auth')->resetUsers();
         }
 
         $request->setUserResolver(function ($guard = null) {
@@ -722,7 +744,7 @@ class Application extends Container
      * If no name is provided, then we'll return the path to the config folder.
      *
      * @param  string|null  $name
-     * @return string
+     * @return string|null
      */
     public function getConfigurationPath($name = null)
     {
@@ -743,6 +765,8 @@ class Application extends Container
                 return $path;
             }
         }
+
+        return null;
     }
 
     /**
@@ -970,11 +994,18 @@ class Application extends Container
             return $this->namespace;
         }
 
-        $composer = json_decode(file_get_contents(base_path('composer.json')), true);
+        $manifest = $this->basePath('composer.json');
+        if (! is_file($manifest)) {
+            throw new RuntimeException('Unable to detect application namespace: composer.json is missing.');
+        }
+
+        $composer = json_decode(file_get_contents($manifest), true, 512, JSON_THROW_ON_ERROR);
+
+        $applicationPath = realpath($this->path());
 
         foreach ((array) data_get($composer, 'autoload.psr-4') as $namespace => $path) {
             foreach ((array) $path as $pathChoice) {
-                if (realpath(app()->path()) == realpath(base_path().'/'.$pathChoice)) {
+                if ($applicationPath !== false && $applicationPath === realpath($this->basePath($pathChoice))) {
                     return $this->namespace = $namespace;
                 }
             }
@@ -1109,11 +1140,12 @@ class Application extends Container
             'log' => \Psr\Log\LoggerInterface::class,
             \Illuminate\Contracts\Queue\Factory::class => 'queue',
             \Illuminate\Contracts\Queue\Queue::class => 'queue.connection',
-            \Illuminate\Redis\RedisManager::class => 'redis',
+            'Illuminate\\Redis\\RedisManager' => 'redis',
             \Illuminate\Contracts\Redis\Factory::class => 'redis',
-            \Illuminate\Redis\Connections\Connection::class => 'redis.connection',
+            'Illuminate\\Redis\\Connections\\Connection' => 'redis.connection',
             \Illuminate\Contracts\Redis\Connection::class => 'redis.connection',
             'request' => \Illuminate\Http\Request::class,
+            \NourApi\Framework\Http\Request::class => \Illuminate\Http\Request::class,
             \NourApi\Framework\Routing\Router::class => 'router',
             \Illuminate\Contracts\Translation\Translator::class => 'translator',
             \NourApi\Framework\Routing\UrlGenerator::class => 'url',
@@ -1143,7 +1175,6 @@ class Application extends Container
         'composer' => 'registerComposerBindings',
         'config' => 'registerConfigBindings',
         'db' => 'registerDatabaseBindings',
-        \Illuminate\Database\Eloquent\Factory::class => 'registerDatabaseBindings',
         'filesystem' => 'registerFilesystemBindings',
         'filesystem.cloud' => 'registerFilesystemBindings',
         'filesystem.disk' => 'registerFilesystemBindings',
@@ -1163,6 +1194,8 @@ class Application extends Container
         'queue.connection' => 'registerQueueBindings',
         \Illuminate\Contracts\Queue\Factory::class => 'registerQueueBindings',
         \Illuminate\Contracts\Queue\Queue::class => 'registerQueueBindings',
+        'redis' => 'registerRedisBindings',
+        'redis.connection' => 'registerRedisBindings',
         'router' => 'registerRouterBindings',
         \Psr\Http\Message\ServerRequestInterface::class => 'registerPsrRequestBindings',
         \Psr\Http\Message\ResponseInterface::class => 'registerPsrResponseBindings',

@@ -55,6 +55,13 @@ class UrlGenerator
         $this->app = $app;
     }
 
+    /** Clear URL values derived from the previous request. */
+    public function resetRequestCache(): void
+    {
+        $this->cachedRoot = null;
+        $this->cachedSchema = null;
+    }
+
     /**
      * Get the full URL for the current request.
      *
@@ -315,7 +322,7 @@ class UrlGenerator
     protected function replaceRouteParameters($route, &$parameters = [])
     {
         return preg_replace_callback('/\{(.*?)(:.*?)?(\{[0-9,]+\})?\}/', function ($m) use (&$parameters) {
-            return isset($parameters[$m[1]]) ? Arr::pull($parameters, $m[1]) : $m[0];
+            return isset($parameters[$m[1]]) ? rawurlencode((string) Arr::pull($parameters, $m[1])) : $m[0];
         }, $route);
     }
 
