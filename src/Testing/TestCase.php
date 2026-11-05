@@ -39,6 +39,10 @@ abstract class TestCase extends BaseTestCase
 
     protected $code;
 
+    protected $actingAsUsers = [];
+
+    protected $authenticationRebindApplication;
+
     /**
      * Creates the application.
      *
@@ -56,6 +60,8 @@ abstract class TestCase extends BaseTestCase
     protected function refreshApplication()
     {
         Facade::clearResolvedInstances();
+        $this->actingAsUsers = [];
+        $this->authenticationRebindApplication = null;
 
         $this->app = $this->createApplication();
 
@@ -113,26 +119,42 @@ abstract class TestCase extends BaseTestCase
      */
     protected function tearDown(): void
     {
-        if (class_exists('Mockery')) {
-            if (($container = Mockery::getContainer()) !== null) {
-                $this->addToAssertionCount($container->mockery_getExpectationCount());
+        $failure = null;
+        $cleanup = static function (callable $callback) use (&$failure): void {
+            try {
+                $callback();
+            } catch (\Throwable $e) {
+                $failure ??= $e;
             }
+        };
 
-            Mockery::close();
-        }
+        $cleanup(function () {
+            if (class_exists('Mockery')) {
+                if (($container = Mockery::getContainer()) !== null) {
+                    $this->addToAssertionCount($container->mockery_getExpectationCount());
+                }
+                Mockery::close();
+            }
+        });
 
         if ($this->app) {
             foreach ($this->beforeApplicationDestroyedCallbacks as $callback) {
-                $callback();
+                $cleanup($callback);
             }
-
-            $this->app->flush();
+            $cleanup(function () { $this->app->flush(); });
             $this->app = null;
         }
 
-        Component::flushCache();
-        Component::forgetComponentsResolver();
-        Component::forgetFactory();
+        $this->beforeApplicationDestroyedCallbacks = [];
+        $this->actingAsUsers = [];
+        $this->authenticationRebindApplication = null;
+        foreach (['flushCache', 'forgetComponentsResolver', 'forgetFactory'] as $method) {
+            $cleanup([Component::class, $method]);
+        }
+
+        if ($failure !== null) {
+            throw $failure;
+        }
     }
 
     /**
@@ -308,7 +330,21 @@ abstract class TestCase extends BaseTestCase
      */
     public function be(Authenticatable $user, $driver = null)
     {
-        $this->app['auth']->guard($driver)->setUser($user);
+        $auth = $this->app['auth'];
+        if ($driver === null && method_exists($auth, 'getDefaultDriver')) {
+            $driver = $auth->getDefaultDriver();
+        }
+        $this->actingAsUsers[$driver ?? ''] = $user;
+        $auth->guard($driver)->setUser($user);
+
+        if ($this->authenticationRebindApplication !== $this->app) {
+            $this->authenticationRebindApplication = $this->app;
+            $this->app->rebinding('request', function ($app) {
+                foreach ($this->actingAsUsers as $guard => $identity) {
+                    $app['auth']->guard($guard === '' ? null : $guard)->setUser($identity);
+                }
+            });
+        }
     }
 
     /**
