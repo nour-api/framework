@@ -17,10 +17,27 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, dom, xml, curl, fileinfo
+          extensions: mbstring, dom, xml, curl, fileinfo, pdo_sqlite
           coverage: none
       - run: composer validate --strict
       - run: composer install --no-interaction --prefer-dist --no-plugins --no-scripts
       - run: composer audit
       - run: find src tests config -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: composer test -- --fail-on-risky --fail-on-warning
+  optional-integrations:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.5']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, dom, xml, curl, fileinfo, pdo_sqlite
+          coverage: none
+      - name: Install optional components in the disposable CI checkout
+        run: composer require --dev 'illuminate/redis:^12.21' 'nyholm/psr7:^1.8' 'symfony/psr-http-message-bridge:^7.3' --no-interaction --no-plugins --no-scripts
+      - run: composer audit
       - run: composer test -- --fail-on-risky --fail-on-warning

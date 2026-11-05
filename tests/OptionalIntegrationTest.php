@@ -38,4 +38,29 @@ class OptionalIntegrationTest extends TestCase
         $this->expectExceptionMessage('Please install symfony/psr-http-message-bridge');
         $app->prepareResponse($response);
     }
+    public function testPsrRequestsAreRebuiltForEachHttpRequest(): void
+    {
+        $app = new Application;
+        $app->router->addRoute(['GET', 'POST'], '/users/{id}', static function (\Psr\Http\Message\ServerRequestInterface $request) {
+            return [
+                'host' => $request->getUri()->getHost(),
+                'path' => $request->getUri()->getPath(),
+                'method' => $request->getMethod(),
+            ];
+        });
+        if (! class_exists('Nyholm\\Psr7\\Factory\\Psr17Factory') || ! class_exists('Symfony\\Bridge\\PsrHttpMessage\\Factory\\PsrHttpFactory')) {
+            $app->instance('request', Request::create('/'));
+            $this->expectException(BindingResolutionException::class);
+            $this->expectExceptionMessage('Please install symfony/psr-http-message-bridge and nyholm/psr7');
+            $app->make(\Psr\Http\Message\ServerRequestInterface::class);
+            return;
+        }
+        $response = $app->handle(Request::create('http://first.test/users/1'));
+        self::assertSame(['host' => 'first.test', 'path' => '/users/1', 'method' => 'GET'], json_decode($response->getContent(), true));
+        $first = $app->make(\Psr\Http\Message\ServerRequestInterface::class);
+        $response = $app->handle(Request::create('https://second.test/users/2', 'POST'));
+        self::assertSame(['host' => 'second.test', 'path' => '/users/2', 'method' => 'POST'], json_decode($response->getContent(), true));
+        self::assertNotSame($first, $app->make(\Psr\Http\Message\ServerRequestInterface::class));
+    }
+
 }
