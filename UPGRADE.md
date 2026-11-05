@@ -14,3 +14,13 @@ These changes are not a published release. Runtime PHP remains `^8.2`; Composer 
 - The testing base restores PHP process error/exception handlers after each test. Tests constructing Application directly can use `Testing\Concerns\RestoresPhpHandlers`.
 
 The skeleton's token authentication remains an example requiring an application schema and a production token policy. Sessions, CSRF and CORS policies are application configuration responsibilities. No new session, authentication issuance, plugin manager or concurrency runtime is introduced.
+
+## Continued integration hardening
+
+- Programmatic console `bootstrap()`, `call()` and command discovery boot registered service providers once, matching the CLI entry point.
+- Providers registered during application boot are also booted before completion. Reentrant boot calls are guarded, and successful providers are not repeated when initial boot is retried after another provider fails.
+- Facade activation clears cached roots when switching applications. Custom aliases may be added after defaults were already registered; existing class aliases are preserved.
+- `DatabaseMigrations` fails the test on nonzero migration/rollback exit codes. `DatabaseTransactions` restores connections if setup partially fails, returns nested transactions to their previous level, and attempts cleanup on every connection before reporting a cleanup failure.
+- Testing `actingAs()`/`be()` identities persist across that test's requests and reset on application refresh. This test-only behavior does not disable runtime request identity isolation.
+- Test teardown attempts every registered cleanup and flushes the application even if a cleanup callback fails; it then reports the first failure.
+- The development suite checks actual PDO SQLite driver availability for executable database coverage, without requiring a particular extension provider. Production requirements and Composer consumers remain unchanged.

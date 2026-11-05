@@ -43,3 +43,5 @@ php benchmarks/router.php
 See [UPGRADE.md](UPGRADE.md) for behavior changes and `../docs/guide/index.html` in the five-repository workspace for the maintained engineering guide. Normal HTTP operation requires no PSR-7 bridge; install `symfony/psr-http-message-bridge` and `nyholm/psr7` only if using optional PSR request/response conversion.
 
 A fresh application per concurrent request is required. Sequential request fixes do not certify custom singletons, third-party guards or services for concurrent workers.
+
+The development suite now requires an available PDO SQLite driver and performs real database CRUD, validation, migration and transaction checks in memory. See [integration check instructions](tests/integration/README.md) for testing Redis cache/queues against a private temporary server and PSR-7 conversion with optional dependencies installed in a separate Composer project.
