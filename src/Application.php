@@ -13,6 +13,7 @@ use Illuminate\Contracts\Broadcasting\Broadcaster;
 use Illuminate\Contracts\Broadcasting\Factory;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Container\BindingResolutionException;
+use Illuminate\Contracts\Log\ContextLogProcessor;
 use Illuminate\Database\DatabaseServiceProvider;
 use Illuminate\Database\MigrationServiceProvider;
 use Illuminate\Encryption\EncryptionServiceProvider;
@@ -21,6 +22,7 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Filesystem\FilesystemServiceProvider;
 use Illuminate\Hashing\HashServiceProvider;
 use Illuminate\Http\Request;
+use Illuminate\Log\Context\ContextLogProcessor as DefaultContextLogProcessor;
 use Illuminate\Log\LogManager;
 use Illuminate\Pagination\PaginationServiceProvider;
 use Illuminate\Queue\QueueServiceProvider;
@@ -528,6 +530,11 @@ class Application extends Container
      */
     protected function registerLogBindings()
     {
+        if (interface_exists(ContextLogProcessor::class) && class_exists(DefaultContextLogProcessor::class) &&
+            ! $this->bound(ContextLogProcessor::class)) {
+            $this->singleton(ContextLogProcessor::class, DefaultContextLogProcessor::class);
+        }
+
         $this->singleton(LoggerInterface::class, function () {
             $this->configure('logging');
 

@@ -29,3 +29,4 @@ The skeleton's token authentication remains an example requiring an application 
 
 - Resolving the database component also resolves its event dispatcher before a connection is created. Query and transaction events therefore work before application boot, without depending on other services having already initialized events.
 - The installer permission regression check refreshes PHP stat metadata before verifying the private environment file mode. The required permission remains `0600`.
+- Logging binds Illuminate's default context processor when that integration is available, preserving explicit application bindings. Configured channels now avoid an unintended emergency-logger fallback.
