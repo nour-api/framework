@@ -16,6 +16,8 @@ Nour-API is a stunningly fast PHP micro-framework for building web applications 
 
 [Engineering guide](https://nour-api.github.io/guide/) · [Upgrade guide](UPGRADE.md)
 
+Development on `dev` adds an optional [isolated async HTTP runtime and concurrent I/O API](ASYNC.md), while preserving the existing PHP-FPM entry point. These additions are not included in release 2.2.0.
+
 
 ## Contributing
 
