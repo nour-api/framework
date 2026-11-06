@@ -12,6 +12,18 @@ $app = new Application(dirname(__DIR__, 3));
 $app->withFacades();
 $app->router->get('/', static fn () => 'runtime ready');
 $app->router->get('/context', static fn () => ['console' => $app->runningInConsole(), 'memory' => ini_get('memory_limit')]);
+$app->router->post('/binary', static function (Request $request) {
+    $values = [];
+    foreach ($request->request->all() as $key => $value) {
+        $values[base64_encode((string) $key)] = base64_encode($value);
+    }
+    return ['values' => $values, 'header' => base64_encode($request->header('X-Bytes', ''))];
+});
+$app->router->get('/binary-response', static fn () => new Response("\xff\x00", 200, ['X-Bytes' => "\xff"]));
+$app->router->get('/length', static fn () => new Response('hello', 200, ['Content-Length' => '5']));
+$app->router->get('/no-content', static fn () => new Response('', 204));
+$app->router->get('/not-modified', static fn () => new Response('', 304));
+$app->router->get('/informational', static fn () => new Response('', 103));
 $app->router->get('/delay/{id}', static function (Request $request, string $id) {
     static $requests = 0;
     $requests++;
@@ -44,7 +56,10 @@ $app->router->get('/stream', static fn () => new StreamedResponse(static functio
 $app->router->get('/large', static fn () => str_repeat('x', 30000));
 $app->router->get('/timeout', static function () { sleep(5); return 'too late'; });
 $app->router->post('/upload-timeout', static function (Request $request) {
-    $request->file('attachments.report')->getContent();
+    $directory = dirname($request->file('attachments.report')->getPathname());
+    file_put_contents($directory.'/.metadata', 'request data');
+    mkdir($directory.'/nested');
+    file_put_contents($directory.'/nested/partial', 'request data');
     sleep(5);
     return 'too late';
 });

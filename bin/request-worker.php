@@ -6,9 +6,10 @@ require $argv[1];
 define('NOUR_HTTP_RUNTIME', true);
 
 use NourApi\Framework\Runtime\RequestWorker;
+use NourApi\Framework\Runtime\WireCodec;
 
 try {
-    $payload = json_decode(stream_get_contents(STDIN), true, 512, JSON_THROW_ON_ERROR);
+    $payload = WireCodec::decode(stream_get_contents(STDIN));
     $result = null;
     $failure = null;
     $handle = static function () use ($argv, $payload, &$result, &$failure): void {
@@ -30,7 +31,7 @@ try {
     }
     // A dedicated descriptor prevents startup/shutdown output from corrupting the response.
     $wire = fopen('php://fd/3', 'w');
-    $encoded = json_encode($result, JSON_THROW_ON_ERROR);
+    $encoded = WireCodec::encode($result);
     $written = 0;
     while ($written < strlen($encoded)) {
         $bytes = fwrite($wire, substr($encoded, $written));

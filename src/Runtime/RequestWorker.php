@@ -20,10 +20,7 @@ final class RequestWorker
             $server['SCRIPT_NAME'] = '/index.php';
             $server['SCRIPT_FILENAME'] = dirname($bootstrap, 2).'/public/index.php';
             $server['PHP_SELF'] = '/index.php';
-            $content = base64_decode($payload['content'], true);
-            if ($content === false) {
-                throw new RuntimeException('Invalid request content.');
-            }
+            $content = $payload['content'];
             $files = self::uploads($payload['files'] ?? [], $temporaryFiles, $uploadDirectory ?? sys_get_temp_dir());
             $_GET = $payload['query'];
             $_POST = $payload['post'];
@@ -52,7 +49,7 @@ final class RequestWorker
             foreach ($response->headers->getCookies() as $cookie) {
                 $headers['Set-Cookie'][] = (string) $cookie;
             }
-            return ['status' => $response->getStatusCode(), 'headers' => $headers, 'body' => base64_encode($body)];
+            return ['status' => $response->getStatusCode(), 'headers' => $headers, 'body' => $body];
         } finally {
             while (ob_get_level() > $level) {
                 ob_end_clean();
@@ -73,10 +70,7 @@ final class RequestWorker
                 $result[$key] = self::uploads($value, $temporaryFiles, $directory);
                 continue;
             }
-            $content = base64_decode($value['content'], true);
-            if ($content === false) {
-                throw new RuntimeException('Invalid upload content.');
-            }
+            $content = $value['content'];
             $path = tempnam($directory, 'nour-upload-');
             if ($path === false) {
                 throw new RuntimeException('Unable to create upload storage.');

@@ -49,33 +49,44 @@ final class SwooleServer
             'package_max_length' => $this->maxRequestBytes,
             'max_coroutine' => $this->concurrency + 128,
         ]);
+        $cleanup = static function (): void {
+            ProcessExchange::shutdown();
+            RequestStorage::closeAll();
+        };
+        $server->on('workerExit', $cleanup);
+        $server->on('workerStop', $cleanup);
         $server->on('request', function ($request, $response): void {
             if ($this->active >= $this->concurrency) {
-                $response->status(503);
                 $response->header('Retry-After', '1');
-                $response->end('Service unavailable');
+                self::error($request, $response, 503, 'Service unavailable');
                 return;
             }
             $this->active++;
-            $uploadDirectory = null;
+            $storage = null;
             try {
                 $payload = self::payload($request);
-                $uploadDirectory = sys_get_temp_dir().'/nour-request-'.bin2hex(random_bytes(16));
-                if (! mkdir($uploadDirectory, 0700)) {
-                    throw new RuntimeException('Unable to allocate private request storage.');
-                }
+                $storage = new RequestStorage;
                 $output = (new ProcessExchange($this->timeout, $this->maxResponseBytes))->execute(
-                    [PHP_BINARY, '-d', 'memory_limit='.$this->memoryLimitMegabytes.'M', dirname(__DIR__, 2).'/bin/request-worker.php', realpath($this->autoload), realpath($this->bootstrap), $uploadDirectory],
-                    json_encode($payload, JSON_THROW_ON_ERROR),
+                    [PHP_BINARY, '-d', 'memory_limit='.$this->memoryLimitMegabytes.'M', dirname(__DIR__, 2).'/bin/request-worker.php', realpath($this->autoload), realpath($this->bootstrap), $storage->path],
+                    WireCodec::encode($payload),
                 );
-                $result = json_decode($output, true, 512, JSON_THROW_ON_ERROR);
-                $body = base64_decode($result['body'], true);
-                if ($body === false || ! is_int($result['status']) || $result['status'] < 100 || $result['status'] > 599) {
+                $result = WireCodec::decode($output);
+                $body = $result['body'];
+                if (! is_string($body) || ! is_int($result['status']) || $result['status'] < 200 || $result['status'] > 599) {
                     throw new RuntimeException('Invalid worker response.');
                 }
                 $response->status($result['status']);
                 // Swoole owns message framing and connection persistence.
                 $excluded = ['connection', 'transfer-encoding', 'content-length', 'keep-alive', 'upgrade', 'trailer', 'te', 'proxy-authenticate', 'proxy-authorization'];
+                if ($request->server['request_method'] === 'HEAD' && ! in_array($result['status'], [204, 304], true)) {
+                    // HEAD describes the GET representation, even though its own body is empty.
+                    $excluded = array_values(array_diff($excluded, ['content-length']));
+                }
+                if (in_array($result['status'], [204, 304], true)) {
+                    // Suppress automatic framing/type defaults; explicit application type metadata can follow.
+                    $response->header('Content-Length', '');
+                    $response->header('Content-Type', '');
+                }
                 foreach ($result['headers'] as $name => $values) {
                     if (strtolower($name) === 'connection') {
                         foreach ($values as $value) {
@@ -90,25 +101,28 @@ final class SwooleServer
                 }
                 $response->end($request->server['request_method'] === 'HEAD' ? '' : $body);
             } catch (RequestTimeout) {
-                $response->status(504);
-                $response->end('Gateway timeout');
+                self::error($request, $response, 504, 'Gateway timeout');
             } catch (Throwable) {
-                $response->status(502);
-                $response->end('Application worker failed');
+                self::error($request, $response, 502, 'Application worker failed');
             } finally {
                 $this->active--;
-                if ($uploadDirectory !== null && is_dir($uploadDirectory)) {
-                    // Reap upload files even if the worker was killed at its deadline.
-                    foreach (glob($uploadDirectory.'/*') as $file) {
-                        if (is_file($file) || is_link($file)) {
-                            unlink($file);
-                        }
-                    }
-                    rmdir($uploadDirectory);
-                }
+                // Reap all owned request files, including after a worker deadline.
+                $storage?->close();
             }
         });
         $server->start();
+    }
+
+    private static function error(object $request, object $response, int $status, string $message): void
+    {
+        $response->status($status);
+        $response->header('Content-Type', 'text/plain; charset=utf-8');
+        if ($request->server['request_method'] === 'HEAD') {
+            $response->header('Content-Length', (string) strlen($message));
+            $response->end('');
+        } else {
+            $response->end($message);
+        }
     }
 
     private static function payload(object $request): array
@@ -131,7 +145,7 @@ final class SwooleServer
         $content = $request->rawContent();
         return [
             'server' => $server, 'query' => $request->get ?? [], 'post' => $request->post ?? [],
-            'cookies' => $request->cookie ?? [], 'content' => base64_encode($content === false ? '' : $content),
+            'cookies' => $request->cookie ?? [], 'content' => $content === false ? '' : $content,
             'files' => self::uploads((new FileBag($request->files ?? []))->all()),
         ];
     }
@@ -144,7 +158,7 @@ final class SwooleServer
                 $result[$key] = [
                     '__nour_upload' => true, 'name' => $file->getClientOriginalName(),
                     'type' => $file->getClientMimeType(), 'error' => $file->getError(),
-                    'content' => base64_encode(is_file($file->getPathname()) ? file_get_contents($file->getPathname()) : ''),
+                    'content' => is_file($file->getPathname()) ? file_get_contents($file->getPathname()) : '',
                 ];
             } elseif (is_array($file)) {
                 $result[$key] = self::uploads($file);

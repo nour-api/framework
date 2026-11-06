@@ -57,3 +57,4 @@ jobs:
       - run: composer install --no-interaction --prefer-dist --no-plugins --no-scripts
       - run: php tests/integration/concurrent.php
       - run: python3 tests/integration/async.py
+      - run: python3 tests/integration/shutdown.py
