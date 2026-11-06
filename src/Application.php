@@ -175,7 +175,7 @@ class Application extends Container
      */
     public function version()
     {
-        return 'Nour-API (2.1) (Illuminate Components ^12.21)';
+        return 'Nour-API (2.2.0) (Illuminate Components ^12.21)';
     }
 
     /**

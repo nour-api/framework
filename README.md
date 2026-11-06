@@ -14,6 +14,7 @@ Nour-API is a stunningly fast PHP micro-framework for building web applications 
 
 ## Official Documentation
 
+[Engineering guide](https://nour-api.github.io/guide/) · [Upgrade guide](UPGRADE.md)
 
 
 ## Contributing
@@ -45,3 +46,7 @@ See [UPGRADE.md](UPGRADE.md) for behavior changes and `../docs/guide/index.html`
 A fresh application per concurrent request is required. Sequential request fixes do not certify custom singletons, third-party guards or services for concurrent workers.
 
 The development suite now requires an available PDO SQLite driver and performs real database CRUD, validation, migration and transaction checks in memory. See [integration check instructions](tests/integration/README.md) for testing Redis cache/queues against a private temporary server and PSR-7 conversion with optional dependencies installed in a separate Composer project.
+
+## Release publication
+
+Stable `v*` tags run the release verification workflow before a GitHub Release is created. Package discovery through Packagist depends on its configured repository integration; publication is verified against the registry before dependent package releases are advanced. No API keys are stored in the repository.

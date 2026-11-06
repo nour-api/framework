@@ -1,6 +1,6 @@
-# Local 2.1 engineering changes
+# Upgrading to Nour-API 2.2
 
-These changes are not a published release. Runtime PHP remains `^8.2`; Composer consumers still use `nour-api/framework ^2.1`.
+Release 2.2.0 retains PHP `^8.2`. Existing `nour-api/framework ^2.1` constraints accept this release; the updated application skeleton uses `^2.2`. Review the behavior changes below before upgrading.
 
 - `Application::run()` sends the response and invokes application termination correctly. Global middleware short-circuits are prepared as HTTP responses, including HEAD responses.
 - Route groups unwind after registration exceptions. Static closures are accepted. The FastRoute dispatcher is cached per router revision; adding/replacing routes or replacing the router rebuilds it. `setDispatcher()` retains its explicit override semantics.

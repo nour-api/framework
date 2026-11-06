@@ -8,7 +8,7 @@ For optional Redis and PSR-7 integration, create a separate temporary Composer p
 {
   "name": "nour-api-local/integration-checks",
   "require": {
-    "nour-api/framework": "2.1.1",
+    "nour-api/framework": "2.2.0",
     "illuminate/redis": "^12.21",
     "nyholm/psr7": "^1.8",
     "symfony/psr-http-message-bridge": "^7.3"
@@ -22,7 +22,7 @@ For optional Redis and PSR-7 integration, create a separate temporary Composer p
     "url": "/absolute/path/to/framework",
     "options": {
       "symlink": true,
-      "versions": {"nour-api/framework": "2.1.1"}
+      "versions": {"nour-api/framework": "2.2.0"}
     }
   }]
 }
