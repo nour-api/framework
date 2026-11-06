@@ -1,0 +1,52 @@
+#!/usr/bin/env php
+<?php
+
+$autoload = $_composer_autoload_path ?? __DIR__.'/../vendor/autoload.php';
+require $autoload;
+
+use NourApi\Framework\Runtime\SwooleServer;
+use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
+
+$console = new Application('Nour-API HTTP runtime');
+$command = new Command('serve');
+foreach ([
+    'bootstrap' => [getcwd().'/bootstrap/app.php', 'Application bootstrap file'],
+    'host' => ['127.0.0.1', 'Listening address'],
+    'port' => ['8000', 'Listening port'],
+    'workers' => ['1', 'HTTP gateway worker processes'],
+    'concurrency' => ['16', 'Maximum active application processes per gateway worker'],
+    'timeout' => ['30', 'Request deadline in seconds'],
+    'max-request-bytes' => ['2097152', 'Maximum HTTP request size'],
+    'max-response-bytes' => ['16777216', 'Maximum encoded response size'],
+    'memory-limit-mb' => ['128', 'PHP memory limit per isolated application process (minimum 16 MB)'],
+] as $name => [$default, $description]) {
+    $command->addOption($name, null, InputOption::VALUE_REQUIRED, $description, $default);
+}
+$command->setCode(static function (InputInterface $input, OutputInterface $output) use ($autoload): int {
+    $integers = [];
+    foreach (['port', 'workers', 'concurrency', 'max-request-bytes', 'max-response-bytes', 'memory-limit-mb'] as $name) {
+        $integers[$name] = filter_var($input->getOption($name), FILTER_VALIDATE_INT);
+        if ($integers[$name] === false) {
+            throw new InvalidArgumentException("--{$name} must be an integer.");
+        }
+    }
+    if (! is_numeric($input->getOption('timeout'))) {
+        throw new InvalidArgumentException('--timeout must be numeric.');
+    }
+    $server = new SwooleServer(
+        $input->getOption('bootstrap'), $autoload, $input->getOption('host'), $integers['port'],
+        $integers['workers'], $integers['concurrency'], (float) $input->getOption('timeout'),
+        $integers['max-request-bytes'], $integers['max-response-bytes'],
+        $integers['memory-limit-mb'],
+    );
+    $output->writeln('Starting isolated async HTTP runtime. Press Ctrl+C to stop.');
+    $server->start();
+    return Command::SUCCESS;
+});
+$console->add($command);
+$console->setDefaultCommand('serve', true);
+$console->run();

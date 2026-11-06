@@ -969,7 +969,8 @@ class Application extends Container
      */
     public function runningInConsole()
     {
-        return \PHP_SAPI === 'cli' || \PHP_SAPI === 'phpdbg';
+        return ! (defined('NOUR_HTTP_RUNTIME') && NOUR_HTTP_RUNTIME === true)
+            && (\PHP_SAPI === 'cli' || \PHP_SAPI === 'phpdbg');
     }
 
     /**

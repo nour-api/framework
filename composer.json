@@ -72,6 +72,10 @@
     "suggest": {
         "illuminate/redis": "Redis cache and queue connections (^12.21).",
         "symfony/psr-http-message-bridge": "Optional PSR-7 request and response conversion (^7.3).",
-        "nyholm/psr7": "Optional PSR-7 request and response objects (^1.8)."
-    }
+        "nyholm/psr7": "Optional PSR-7 request and response objects (^1.8).",
+        "ext-swoole": "Optional isolated async HTTP runtime and concurrent I/O tasks (6.x)."
+    },
+    "bin": [
+        "bin/nour-serve"
+    ]
 }
