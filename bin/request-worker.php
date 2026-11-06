@@ -28,7 +28,18 @@ try {
     if ($failure !== null) {
         throw $failure;
     }
-    fwrite(STDOUT, json_encode($result, JSON_THROW_ON_ERROR));
+    // A dedicated descriptor prevents startup/shutdown output from corrupting the response.
+    $wire = fopen('php://fd/3', 'w');
+    $encoded = json_encode($result, JSON_THROW_ON_ERROR);
+    $written = 0;
+    while ($written < strlen($encoded)) {
+        $bytes = fwrite($wire, substr($encoded, $written));
+        if ($bytes === false || $bytes === 0) {
+            throw new RuntimeException('Unable to write the response envelope.');
+        }
+        $written += $bytes;
+    }
+    fclose($wire);
 } catch (Throwable $exception) {
     // Errors are deliberately generic: bootstrap exceptions may contain credentials.
     fwrite(STDERR, "Nour-API request worker failed; inspect application logs.\n");

@@ -22,7 +22,7 @@ final class ProcessExchange
         if (! extension_loaded('swoole') || Coroutine::getCid() < 0) {
             throw new RuntimeException('The process exchange requires an active Swoole coroutine.');
         }
-        $process = proc_open($command, [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+        $process = proc_open($command, [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w'], 3 => ['pipe', 'w']], $pipes);
         if (! is_resource($process)) {
             throw new RuntimeException('Unable to start the request process.');
         }
@@ -49,8 +49,9 @@ final class ProcessExchange
                         unset($pipes[0]);
                     }
                 }
-                $output .= stream_get_contents($pipes[1]);
-                // Drain stderr to avoid pipe deadlock, but retain no application secrets.
+                $output .= stream_get_contents($pipes[3]);
+                // stdout/stderr cannot corrupt the private response pipe. Drain both to avoid deadlock.
+                stream_get_contents($pipes[1]);
                 stream_get_contents($pipes[2]);
                 if (strlen($output) > $this->maxOutputBytes) {
                     throw new RuntimeException('The request response exceeds the configured output limit.');
@@ -59,7 +60,7 @@ final class ProcessExchange
                 if (! $status['running'] && $status['exitcode'] >= 0) {
                     $exitCode = $status['exitcode'];
                 }
-                if (! $status['running'] && feof($pipes[1]) && feof($pipes[2])) {
+                if (! $status['running'] && feof($pipes[1]) && feof($pipes[2]) && feof($pipes[3])) {
                     if ($exitCode !== 0) {
                         throw new RuntimeException('The request process failed. Consult the application log.');
                     }

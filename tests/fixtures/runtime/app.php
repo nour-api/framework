@@ -59,6 +59,7 @@ $app->router->post('/move', static function (Request $request) {
 });
 $app->router->get('/exit', static function () { posix_kill(getmypid(), SIGKILL); });
 $app->router->get('/termination', static function () use ($app) {
+    register_shutdown_function(static function () { echo 'Legacy shutdown output must not corrupt the transport'; });
     $path = sys_get_temp_dir().'/nour-termination-'.getmypid();
     $app->terminating(static function () use ($path) { file_put_contents($path, 'done'); });
     return ['marker' => $path];
