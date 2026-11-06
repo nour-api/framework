@@ -5,6 +5,9 @@
 - Add an optional Swoole HTTP gateway with process-isolated application requests, bounded concurrency, deadlines, memory/output limits and private upload transport.
 - Add structured concurrent I/O task groups with keyed results and exception settlement; retain synchronous HTTP operation without Swoole.
 - Add real-socket async, request isolation, upload, failure recovery and backpressure checks plus optional PHP 8.2/8.5 async CI.
+- Preserve binary strings and keys throughout private async IPC; reject malformed and ambiguous envelopes.
+- Clean nested/hidden request files without following links and reap active request processes on controlled gateway shutdown.
+- Correct HEAD representation lengths and gateway error bodies, suppress automatic 204/304 framing/type defaults, and reject final informational responses.
 
 ## 2.2.0 — 2026-11-06
 
