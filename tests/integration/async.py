@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Real Swoole sockets and isolated PHP processes. No remote services or credentials."""
 import concurrent.futures
+import base64
 import http.client
 import json
 import os
@@ -76,6 +77,8 @@ try:
 
     value = json.loads(request(port, '/echo', 'POST', b'{"name":"Nour"}', {'Content-Type': 'application/json', 'Cookie': 'session=test', 'Proxy': 'http://untrusted'})[2])
     assert value['json'] == {'name': 'Nour'} and value['cookies'] == {'session': 'test'} and not value['proxy'], value
+    value = json.loads(request(port, '/echo?a=one%20two', 'POST', b'0', {'Content-Type': 'application/octet-stream'})[2])
+    assert base64.b64decode(value['content']) == b'0' and value['uri'] == '/echo?a=one%20two', value
     value = json.loads(request(port, '/echo', 'POST', b'name=Nour', {'Content-Type': 'application/x-www-form-urlencoded'})[2])
     assert value['form'] == {'name': 'Nour'}, value
     multipart = b'--nour\r\nContent-Disposition: form-data; name="attachments[report]"; filename="report.txt"\r\nContent-Type: text/plain\r\n\r\nhello upload\r\n--nour--\r\n'

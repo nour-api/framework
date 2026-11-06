@@ -26,6 +26,7 @@ $app->router->post('/echo', static function (Request $request) {
     $file = $request->file('attachments.report');
     return [
         'json' => $request->json()->all(), 'form' => $request->request->all(), 'cookies' => $request->cookies->all(),
+        'uri' => $request->getRequestUri(),
         'content' => base64_encode($request->getContent()), 'proxy' => isset($_SERVER['HTTP_PROXY']),
         'file' => $file ? ['name' => $file->getClientOriginalName(), 'content' => file_get_contents($file->getPathname()), 'valid' => $file->isValid()] : null,
         'file_global' => $_FILES['attachments']['name']['report'] ?? null,

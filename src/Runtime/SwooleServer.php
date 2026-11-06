@@ -117,6 +117,9 @@ final class SwooleServer
         foreach ($request->server as $name => $value) {
             $server[strtoupper($name)] = $value;
         }
+        if (($server['QUERY_STRING'] ?? '') !== '' && ! str_contains($server['REQUEST_URI'], '?')) {
+            $server['REQUEST_URI'] .= '?'.$server['QUERY_STRING'];
+        }
         foreach ($request->header as $name => $value) {
             // HTTP_PROXY must never become a proxy configuration variable (httpoxy).
             if (strtolower($name) === 'proxy') {
@@ -125,9 +128,10 @@ final class SwooleServer
             $name = strtoupper(str_replace('-', '_', $name));
             $server[in_array($name, ['CONTENT_TYPE', 'CONTENT_LENGTH'], true) ? $name : 'HTTP_'.$name] = $value;
         }
+        $content = $request->rawContent();
         return [
             'server' => $server, 'query' => $request->get ?? [], 'post' => $request->post ?? [],
-            'cookies' => $request->cookie ?? [], 'content' => base64_encode($request->rawContent() ?: ''),
+            'cookies' => $request->cookie ?? [], 'content' => base64_encode($content === false ? '' : $content),
             'files' => self::uploads((new FileBag($request->files ?? []))->all()),
         ];
     }
